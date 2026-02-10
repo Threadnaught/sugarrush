@@ -7,7 +7,7 @@ import json
 # rather than pushing it directly into an ndarray, I would point out the separation
 # of scales between what the GPU is doing (often 10s of GBs) and what we're doing here
 # (each report must only be a few 100 bytes) if I ever run models which generate more
-# logs, this may be an issue. I'll worry about it then.
+# logs, this may be an issue. Till then, KISS
 
 model_config_t = dict[str, Any]
 result_t = dict[str, Union[int, float, torch.Tensor, np.ndarray]] # todo report np arrays
@@ -51,20 +51,20 @@ def report_result(
 		# print(result_type, result_i, result_narrowed)
 		print(result_type, ', '.join(['{}:{}'.format(key, result_narrowed[key]) for key in result_narrowed]))
 
-# TODO: result_t all vs result_t ndarray only
-# Create new type aliases
 def run_training(
 	train_individual_config:train_individual_config_t,
 	configs:list[model_config_t],
 	log_intervals: dict[str, int]
-) -> list[dict[str, list[result_narrowed_t]]]:
+) -> Tuple[list[dict[str, list[result_narrowed_t]]], list[Any]]:
 	config_results:list[dict[str, list[result_narrowed_t]]] = []
+	config_returns:list[Any] = []
+
 	for config in configs:
 		print('using config ', json.dumps(config))
 		config_results.append({})
-		train_individual_config(config, lambda report_type, result: report_result(report_type, result, config_results[-1], log_intervals))
-	
-	return config_results
+		config_returns.append(train_individual_config(config, lambda report_type, result: report_result(report_type, result, config_results[-1], log_intervals)))
+
+	return config_results, config_returns
 
 def extract_column_single_config(results:dict[str, list[result_narrowed_t]], report_type:str, column_name:str) -> np.ndarray:
 	return np.array([result[column_name] for result in results[report_type]])
