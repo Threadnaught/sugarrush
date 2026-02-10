@@ -39,11 +39,13 @@ def report_result(result_type:str, result:result_t, config_results:dict[str, lis
 		# print(result_type, result_i, result_narrowed)
 		print(result_type, ', '.join(['{}:{}'.format(key, result_narrowed[key]) for key in result_narrowed]))
 
+# TODO: result_t all vs result_t ndarray only
+# Create new type aliases
 def run_training(
 	train_individual_config:train_individual_config_t,
 	configs:list[model_config_t],
 	log_intervals: dict[str, int]
-):
+) -> list[dict[str, list[result_t]]]:
 	config_results:list[dict[str, list[result_t]]] = []
 	for config in configs:
 		print('using config ', json.dumps(config))
@@ -51,3 +53,9 @@ def run_training(
 		train_individual_config(config, lambda report_type, result: report_result(report_type, result, config_results[-1], log_intervals))
 	
 	return config_results
+
+def extract_column_single_config(results:dict[str, list[result_t]], report_type:str, column_name:str) -> np.ndarray:
+	return np.array([result[column_name] for result in results[report_type]])
+
+def extract_column_all_configs(results:list[dict[str, list[result_t]]], report_type:str, column_name:str) -> list[np.ndarray]:
+	return [extract_column_single_config(result, report_type, column_name) for result in results]
