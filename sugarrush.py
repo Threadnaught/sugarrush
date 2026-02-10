@@ -8,7 +8,7 @@ class model_config:
 		self.epoch_count = epoch_count
 		pass
 
-class model_step_result:
+class step_result:
 	def __init__(self, type:str, epoch:int, step:int | None):
 		self.type = type
 		self.epoch = epoch
@@ -21,7 +21,7 @@ class model_step_result:
 			step_str = ' step {}'.format(self.step)
 		return '{} epoch {}/{}{} '.format(self.type, self.epoch, self.config.epoch_count, step_str)
 
-def register_train_step_result(result:model_step_result, config: model_config, result_list:dict[str,list[model_step_result]], log_interval:dict[str, int]):
+def register_train_step_result(result:step_result, config: model_config, result_list:dict[str,list[step_result]], log_interval:dict[str, int]):
 	# Add result to relevant list
 	result.config = config
 	if not result.type in result_list:
@@ -36,11 +36,11 @@ def register_train_step_result(result:model_step_result, config: model_config, r
 
 # TODO: type gore
 def run_training(
-	train_individual_config:Callable[[model_config, Callable[[model_step_result], None]], None],
+	train_individual_config:Callable[[model_config, Callable[[step_result], None]], None],
 	configs: list[model_config],
 	log_interval: dict[str, int]
-) -> list[dict[str,list[model_step_result]]]:
-	results: list[dict[str,list[model_step_result]]] = []
+) -> list[dict[str,list[step_result]]]:
+	results: list[dict[str,list[step_result]]] = []
 	for config in configs:
 		# Once again the map/object distinction in python bites me
 		print('Running config ', json.dumps(config.__dict__))
