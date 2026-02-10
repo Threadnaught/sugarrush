@@ -3,18 +3,30 @@ import numpy as np
 import torch # todo should this be try import?
 import json
 
+# To those who would question the efficiency of storing each result as an object
+# rather than pushing it directly into an ndarray, I would point out the separation
+# of scales between what the GPU is doing (often 10s of GBs) and what we're doing here
+# (each report must only be a few 100 bytes) if I ever run models which generate more
+# logs, this may be an issue. I'll worry about it then.
+
 model_config_t = dict[str, Any]
 result_t = dict[str, Union[int, float, torch.Tensor, np.ndarray]] # todo report np arrays
+result_narrowed_t = dict[str, np.ndarray]
 report_result_t = Callable[[str, result_t], None]
 train_individual_config_t = Callable[[model_config_t, report_result_t], Any]
 
-def report_result(result_type:str, result:result_t, config_results:dict[str, list[result_t]], log_intervals:dict[str, int]):
+def report_result(
+	result_type:str,
+	result:result_t,
+	config_results:dict[str, list[result_narrowed_t]],
+	log_intervals:dict[str, int]
+):
 	# Append a new list if needed:
 	if not result_type in config_results:
 		config_results[result_type] = []
 	
 	# Convert everything to a nice easy numpy array:
-	result_narrowed: dict[str, np.array] = {}
+	result_narrowed: result_narrowed_t = {}
 	for key in result:
 		value = result[key]
 		if isinstance(value, int) or isinstance(value, float):
@@ -30,9 +42,9 @@ def report_result(result_type:str, result:result_t, config_results:dict[str, lis
 	# Calculate index for reporting:
 	report_i = len(config_results)
 	if 'batch' in result_narrowed:
-		report_i = result_narrowed['batch']
+		report_i = int(result_narrowed['batch'])
 	elif 'epoch' in result_narrowed:
-		report_i = result_narrowed['epoch']
+		report_i = int(result_narrowed['epoch'])
 
 	# Log if needed:
 	if (not result_type in log_intervals) or (report_i % log_intervals[result_type] == 0):
@@ -45,8 +57,8 @@ def run_training(
 	train_individual_config:train_individual_config_t,
 	configs:list[model_config_t],
 	log_intervals: dict[str, int]
-) -> list[dict[str, list[result_t]]]:
-	config_results:list[dict[str, list[result_t]]] = []
+) -> list[dict[str, list[result_narrowed_t]]]:
+	config_results:list[dict[str, list[result_narrowed_t]]] = []
 	for config in configs:
 		print('using config ', json.dumps(config))
 		config_results.append({})
@@ -54,8 +66,8 @@ def run_training(
 	
 	return config_results
 
-def extract_column_single_config(results:dict[str, list[result_t]], report_type:str, column_name:str) -> np.ndarray:
+def extract_column_single_config(results:dict[str, list[result_narrowed_t]], report_type:str, column_name:str) -> np.ndarray:
 	return np.array([result[column_name] for result in results[report_type]])
 
-def extract_column_all_configs(results:list[dict[str, list[result_t]]], report_type:str, column_name:str) -> list[np.ndarray]:
+def extract_column_all_configs(results:list[dict[str, list[result_narrowed_t]]], report_type:str, column_name:str) -> list[np.ndarray]:
 	return [extract_column_single_config(result, report_type, column_name) for result in results]
