@@ -39,12 +39,15 @@ def report_result(result_type:str, result:result_t, config_results:dict[str, lis
 		# print(result_type, result_i, result_narrowed)
 		print(result_type, ', '.join(['{}:{}'.format(key, result_narrowed[key]) for key in result_narrowed]))
 
-def new_run_training(
+def run_training(
 	train_individual_config:train_individual_config_t,
 	configs:list[model_config_t],
 	log_intervals: dict[str, int]
 ):
+	config_results:list[dict[str, list[result_t]]] = []
 	for config in configs:
 		print('using config ', json.dumps(config))
-		config_results:dict[str, list[result_t]] = {}
-		train_individual_config(config, lambda report_type, result: report_result(report_type, result, config_results, log_intervals))
+		config_results.append({})
+		train_individual_config(config, lambda report_type, result: report_result(report_type, result, config_results[-1], log_intervals))
+	
+	return config_results
