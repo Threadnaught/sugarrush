@@ -1,10 +1,9 @@
 import sugarrush as sr
 import random
 import matplotlib.pyplot as plt
-from typing import *
 
 # Define your training function:
-def train_individual_config(config, report) -> None:
+def train_individual_config(config, report):
     for epoch in range(10):
         for batch in range(100):
             report(
@@ -12,9 +11,10 @@ def train_individual_config(config, report) -> None:
                 {'batch':batch, 'epoch':epoch, 'loss':random.uniform(0,config['max'])} 
             )
         report('test', {'epoch':epoch, 'loss':random.uniform(0,config['max'])})
+    return 'your trained model here, if you want to keep it for later' #if you don't want to keep it, don't return anything and let it be GCed
 
 # Run the training
-results, _ = sr.run_training(
+results, trained_models = sr.run_training(
     train_individual_config, # Your training function
     [{'max':2},{'max':5}], # Your configs to train
     {'train':10} # Your log interval (missing implies reporting logging every time)
