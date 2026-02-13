@@ -21,7 +21,9 @@ def report_result(
 	result_type:str,
 	result:result_t,
 	config_results:dict[str, list[result_narrowed_t]],
-	log_intervals:dict[str, int]
+	log_intervals:dict[str, int],
+	config_i,
+	configs_len
 ):
 	# Append a new list if needed:
 	if not result_type in config_results:
@@ -38,7 +40,7 @@ def report_result(
 		elif isinstance(value, np.ndarray):
 			result_narrowed[key] = value
 		else:
-			raise Exception('Result\'s key {} of value {} has unsupported type {}'.format(key, value, type(value)))
+			raise Exception('Result\'s key `{}` of value `{}` has unsupported type `{}`'.format(key, value, type(value)))
 	config_results[result_type].append(result_narrowed)
 
 	# Calculate index for reporting:
@@ -51,7 +53,7 @@ def report_result(
 	# Log if needed:
 	if (not result_type in log_intervals) or (report_i % log_intervals[result_type] == 0):
 		# print(result_type, result_i, result_narrowed)
-		print(result_type, ', '.join(['{}:{}'.format(key, result_narrowed[key]) for key in result_narrowed]))
+		print('config {}/{} {}'.format(config_i+1, configs_len, result_type) + ', '.join(['{}:{}'.format(key, result_narrowed[key]) for key in result_narrowed]))
 
 def run_training(
 	train_individual_config:train_individual_config_t,
@@ -61,10 +63,16 @@ def run_training(
 	config_results:list[dict[str, list[result_narrowed_t]]] = []
 	config_returns:list[Any] = []
 
-	for config in configs:
+	for config_i in range(len(configs)):
+		config = configs[config_i]
 		print('using config ', json.dumps(config))
 		config_results.append({})
-		config_returns.append(train_individual_config(config, lambda report_type, result: report_result(report_type, result, config_results[-1], log_intervals)))
+		config_returns.append(train_individual_config(
+			config,
+			lambda report_type, result: report_result(report_type, result, config_results[-1], log_intervals,
+			config_i,
+			len(configs)
+		)))
 
 	return config_results, config_returns
 
