@@ -15,6 +15,8 @@ result_narrowed_t = dict[str, np.ndarray]
 report_result_t = Callable[[str, result_t], None]
 train_individual_config_t = Callable[[model_config_t, report_result_t], Any]
 
+# TODO: strings might be useful?
+# TODO: global report ordering?
 def report_result(
 	result_type:str,
 	result:result_t,
