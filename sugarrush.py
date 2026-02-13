@@ -53,7 +53,7 @@ def report_result(
 	# Log if needed:
 	if (not result_type in log_intervals) or (report_i % log_intervals[result_type] == 0):
 		# print(result_type, result_i, result_narrowed)
-		print('config {}/{} {}'.format(config_i+1, configs_len, result_type) + ', '.join(['{}:{}'.format(key, result_narrowed[key]) for key in result_narrowed]))
+		print('config {}/{} {} '.format(config_i+1, configs_len, result_type) + ', '.join(['{}:{}'.format(key, result_narrowed[key]) for key in result_narrowed]))
 
 def run_training(
 	train_individual_config:train_individual_config_t,
