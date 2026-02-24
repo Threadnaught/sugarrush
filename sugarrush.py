@@ -1,4 +1,5 @@
 from typing import *
+from typing import Any
 import numpy as np
 import torch # todo should this be try import?
 import json
@@ -81,3 +82,9 @@ def extract_column_single_config(results:dict[str, list[result_narrowed_t]], rep
 
 def extract_column_all_configs(results:list[dict[str, list[result_narrowed_t]]], report_type:str, column_name:str) -> list[np.ndarray]:
 	return [extract_column_single_config(result, report_type, column_name) for result in results]
+
+class NumpyEncoder(json.JSONEncoder):
+	def default(self, o: Any) -> Any:
+		if isinstance(o, np.ndarray):
+			return o.tolist()
+		return super().default(o)
