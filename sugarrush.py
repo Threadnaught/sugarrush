@@ -1,7 +1,9 @@
+from collections.abc import Callable, Iterable, Mapping
 from typing import *
 from typing import Any
 import numpy as np
-import torch # todo should this be try import?
+import torch
+import torch.multiprocessing as mp
 import json
 
 # To those who would question the efficiency of storing each result as an object
@@ -56,26 +58,58 @@ def report_result(
 		# print(result_type, result_i, result_narrowed)
 		print('config {}/{} {} '.format(config_i+1, configs_len, result_type) + ', '.join(['{}:{}'.format(key, result_narrowed[key]) for key in result_narrowed]))
 
+# TODO: typing
+def run_single_config(args):
+		config_i, configs, train_individual_config, log_intervals = args
+		config = configs[config_i]
+		print('using config ', json.dumps(config))
+		current_config_results = {}
+		current_config_return = train_individual_config(
+			config,
+			lambda report_type, result: report_result(report_type, result, current_config_results, log_intervals,
+			config_i,
+			len(configs)
+		))
+
+		return current_config_results, current_config_return
+
 def run_training(
 	train_individual_config:train_individual_config_t,
 	configs:list[model_config_t],
-	log_intervals: dict[str, int]
+	log_intervals: dict[str, int],
+	num_workers: int = 1
 ) -> Tuple[list[dict[str, list[result_narrowed_t]]], list[Any]]:
 	config_results:list[dict[str, list[result_narrowed_t]]] = []
 	config_returns:list[Any] = []
+	
+	if num_workers > 1:
+		# Note: this approach is somewhat limited - python intentionally blocks subprocesses from launching
+		# subsubprocesses because the python devs don't trust you with that power, despite it already being
+		# possible to do plenty of other ill-advised things with their programming language.
 
-	for config_i in range(len(configs)):
-		config = configs[config_i]
-		print('using config ', json.dumps(config))
-		config_results.append({})
-		config_returns.append(train_individual_config(
-			config,
-			lambda report_type, result: report_result(report_type, result, config_results[-1], log_intervals,
-			config_i,
-			len(configs)
-		)))
+		# There are workarounds but they're all pretty ugly. Version two of sr should probably just invoke
+		# instances of the model using subprocess or something.
 
-	return config_results, config_returns
+		# **The practical outcome here is that any data loaders need num_workers=0 :-(**
+
+		mp.set_start_method('spawn')
+		pool = mp.Pool(num_workers)
+		map_outputs = pool.map(run_single_config,
+			zip(
+				range(len(configs)),
+				[configs for _ in range(len(configs))],
+				[train_individual_config for _ in range(len(configs))],
+				[log_intervals for _ in range(len(configs))],
+			),
+		)
+		return zip(*map_outputs)
+	else:
+		for config_i in range(len(configs)):
+			current_config_results, current_config_return = run_single_config((config_i, configs, train_individual_config, log_intervals))
+			config_results.append(current_config_results)
+			config_returns.append(current_config_return)
+
+		return config_results, config_returns
 
 def extract_column_single_config(results:dict[str, list[result_narrowed_t]], report_type:str, column_name:str) -> np.ndarray:
 	return np.array([result[column_name] for result in results[report_type]])
