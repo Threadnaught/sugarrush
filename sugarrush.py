@@ -5,6 +5,7 @@ import numpy as np
 import torch
 import torch.multiprocessing as mp
 import json
+import datetime
 
 # To those who would question the efficiency of storing each result as an object
 # rather than pushing it directly into an ndarray, I would point out the separation
@@ -60,18 +61,22 @@ def report_result(
 
 # TODO: typing
 def run_single_config(args):
-		config_i, configs, train_individual_config, log_intervals = args
-		config = configs[config_i]
-		print('using config ', json.dumps(config))
-		current_config_results = {}
-		current_config_return = train_individual_config(
-			config,
-			lambda report_type, result: report_result(report_type, result, current_config_results, log_intervals,
-			config_i,
-			len(configs)
-		))
+	start_time = datetime.datetime.now()
+	config_i, configs, train_individual_config, log_intervals = args
+	config = configs[config_i]
+	print('using config ', json.dumps(config))
+	current_config_results = {}
+	current_config_return = train_individual_config(
+		config,
+		lambda report_type, result: report_result(report_type, result, current_config_results, log_intervals,
+		config_i,
+		len(configs)
+	))
 
-		return current_config_results, current_config_return
+	duration_s = (datetime.datetime.now() - start_time).total_seconds()
+	report_result('timing', {'duration_s':duration_s}, current_config_results, log_intervals, config_i, len(configs))
+
+	return current_config_results, current_config_return
 
 def run_training(
 	train_individual_config:train_individual_config_t,
