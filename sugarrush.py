@@ -66,6 +66,8 @@ def run_single_config(args):
 	config = configs[config_i]
 	print('using config ', json.dumps(config))
 	current_config_results = {}
+	
+	torch.cuda.memory.reset_peak_memory_stats('cuda')
 	current_config_return = train_individual_config(
 		config,
 		lambda report_type, result: report_result(report_type, result, current_config_results, log_intervals,
@@ -74,7 +76,8 @@ def run_single_config(args):
 	))
 
 	duration_s = (datetime.datetime.now() - start_time).total_seconds()
-	report_result('timing', {'duration_s':duration_s}, current_config_results, log_intervals, config_i, len(configs))
+	max_memory_allocated_bytes = torch.cuda.memory.max_memory_allocated('cuda')
+	report_result('resource_usage', {'duration_s':duration_s, 'max_memory_allocated_bytes':max_memory_allocated_bytes}, current_config_results, log_intervals, config_i, len(configs))
 
 	return current_config_results, current_config_return
 
